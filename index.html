@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بَيَان - المحادثة الذكية</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1A237E;
+            --accent: #FFD600;
+            --secondary: #E91E63;
+            --bg: #f0f2f5;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1A237E 0%, #3F51B5 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        .container {
+            width: 90%;
+            max-width: 450px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 35px;
+            padding: 40px 25px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .logo-area i {
+            font-size: 50px;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        h2 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 28px;
+            font-weight: 800;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .translation-box {
+            background: #f8f9fa;
+            border-right: 5px solid var(--accent);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #deafText {
+            font-size: 24px;
+            color: var(--primary);
+            font-weight: bold;
+            line-height: 1.4;
+        }
+        .label-text {
+            font-size: 13px;
+            color: #757575;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .mic-btn {
+            width: 80px;
+            height: 80px;
+            background: var(--secondary);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(233, 30, 99, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+        .mic-btn.active {
+            background: #ff5252;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255, 82, 82, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
+        }
+        #mySpeech {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #555;
+            font-style: italic;
+            min-height: 24px;
+        }
+        .footer-note {
+            margin-top: 30px;
+            font-size: 11px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-area">
+            <i class="fas fa-hands-helping"></i>
+            <h2>بَيَان</h2>
+            <div class="status-badge" id="connStatus">متصل بالغرفة</div>
+        </div>
+        <p class="label-text">ما يقوله الطرف الآخر (لغة إشارة)</p>
+        <div class="translation-box">
+            <div id="deafText">في انتظار الإشارة...</div>
+        </div>
+        <p class="label-text">تحدث ليظهر نصك عند الطرف الآخر</p>
+        <button class="mic-btn" id="micBtn" onclick="startConverting()">
+            <i class="fas fa-microphone"></i>
+        </button>
+        <p id="mySpeech">اضغط على المايك للبدء</p>
+        <div class="footer-note">نظام بَيَان للترجمة الفورية • 2026</div>
+    </div>
+    <script>
+      const firebaseConfig = {
+         apiKey: "AIzaSyC9r-k3OX0d7qtdq2jCaJEFS_EooozWeak",
+         databaseURL: "https://bayan-db4bb-default-rtdb.firebaseio.com/",
+         projectId: "bayan-db4bb",
+       };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('roomId');
+        const micBtn = document.getElementById('micBtn');
+        if (roomId) {
+            db.ref("ChatRooms/" + roomId + "/deafText").on("value", (snapshot) => {
+                const text = snapshot.val() || "في انتظار الإشارة...";
+                document.getElementById("deafText").innerText = text;
+                const box = document.querySelector('.translation-box');
+                box.style.background = "#fff9c4";
+                setTimeout(() => box.style.background = "#f8f9fa", 500);
+            });
+        } else {
+            document.getElementById("connStatus").innerText = "خطأ في رقم الغرفة";
+            document.getElementById("connStatus").style.background = "#ffebee";
+        }
+        function startConverting() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = "ar-SA";
+            recognition.onstart = () => {
+                micBtn.classList.add('active');
+                document.getElementById("mySpeech").innerText = "جاري الاستماع...";
+            };
+            recognition.onresult = (event) => {
+                const text = event.results[0][0].transcript;
+                document.getElementById("mySpeech").innerText = text;
+                if (roomId) {
+                    db.ref("ChatRooms/" + roomId + "/speakerText").set(text);
+                }
+            };
+            recognition.onend = () => { micBtn.classList.remove('active'); };
+            recognition.onerror = () => {
+                micBtn.classList.remove('active');
+                document.getElementById("mySpeech").innerText = "حدث خطأ في المايك";
+            };
+            recognition.start();
+        }
+    </script>
+</body>
+</html>
